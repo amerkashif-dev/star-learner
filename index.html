@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Star Learner">
+<meta name="theme-color" content="#ffd23f">
+<title>Star Learner</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* DESIGN PHILOSOPHY:
+   - Zero external requests (100% offline/standalone iOS Safari & PWA ready; system-ui rounded typography).
+   - Built for a pre-reading 5-year-old: every prompt spoken, every answer has visual scaffolding, >= 56px touch targets.
+   - Directly targets i-Ready Inform 2 growth areas:
+     1. Literature & Informational Comprehension (Emerging/Early K): 20 rich, original stories/passages with sentence-by-sentence audio highlighting, sequencing ("first/next/last"), and character/event reasoning.
+     2. Number & Operations (Emerging K): New "Add & Take Away" game bridging concrete tap-to-count objects to + and - equations within 10, plus Ten-Frame subitizing in Number Fun.
+     3. Geometry (Emerging K): Upgraded "Shape Hunt" with 2D shapes, side counting, 3D solids, and spatial/positional concepts (above, below, next to, inside).
+     4. Phonics & High-Frequency Words (Mid K -> Grade 1/2): Upgraded "Word Builder" adding Magic-E long-vowel pairs and Grade 1 sight-word spelling alongside CVC and CCVC blends.
+   - Daily 12-minute gentle session timer + parent insights panel with daily streak, minutes, and mastery tracking.
+*/
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffd23f, #151836);
+  --card: light-dark(#ffffff, #232854);
+  --ink: light-dark(#1e2b66, #f5f2ff);
+  --soft: light-dark(#fff5cc, #1b2046);
+  --coral: #ff5d73;
+  --coral-d: #c93a50;
+  --blue: #3a57e8;
+  --blue-d: #233aa8;
+  --green: #22b573;
+  --green-d: #168553;
+  --purple: #9b5de5;
+  --orange: #ff9f1c;
+  --muted: light-dark(#646ea3, #a6ace0);
+}
+:root[data-theme=light] { color-scheme: light; }
+:root[data-theme=dark] { color-scheme: dark; }
+
+* { box-sizing: border-box; min-width: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 18px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, system-ui, sans-serif;
+  overflow-x: clip;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 48px;
+  min-height: 48px;
+}
+button:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+
+.screen {
+  display: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 14px max(4vw, 14px) 28px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+.screen.on { display: flex; flex-direction: column; }
+
+h1, h2, .fred { font-weight: 800; letter-spacing: 0.2px; }
+
+/* Splash */
+#splash { align-items: center; justify-content: center; text-align: center; gap: 18px; }
+#splash .sun { font-size: clamp(92px, 26vw, 168px); animation: bob 2.4s ease-in-out infinite; }
+#splash h1 { font-size: clamp(36px, 9vw, 58px); margin: 0; line-height: 1.05; }
+.big {
+  background: var(--coral);
+  color: #fff;
+  font-weight: 800;
+  font-size: 30px;
+  padding: 18px 46px;
+  border-radius: 999px;
+  box-shadow: 0 7px 0 var(--coral-d);
+}
+.big:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--coral-d); }
+.audio-warn {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 12px 18px;
+  font-size: 16px;
+  max-width: 380px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+}
+
+/* Home */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.hi { font-size: clamp(26px, 6.5vw, 42px); margin: 0; line-height: 1.08; }
+.badges { display: flex; gap: 8px; align-items: center; }
+.starpill {
+  background: var(--card);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: 22px;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+}
+.quest-banner {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.1);
+}
+.quest-steps { display: flex; gap: 10px; align-items: center; font-size: 24px; }
+.qchip {
+  background: var(--soft);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.qchip.done { background: var(--green); color: #fff; }
+.sect { font-weight: 800; font-size: 22px; margin: 14px 4px 8px; display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media(min-width: 700px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile {
+  background: var(--card);
+  border-radius: 26px;
+  padding: 16px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 7px 0 var(--sh, rgba(0,0,0,0.15));
+  position: relative;
+}
+.tile:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--sh, rgba(0,0,0,0.15)); }
+.tile .em { font-size: clamp(50px, 13vw, 68px); line-height: 1.1; }
+.tile .nm { font-weight: 800; font-size: 19px; text-align: center; line-height: 1.15; }
+.tile .lv { font-size: 14px; color: var(--muted); font-weight: 600; }
+.tile .focus-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 18px;
+}
+.grown {
+  margin: 22px auto 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  text-decoration: underline;
+  padding: 12px 18px;
+}
+
+/* Game */
+.gbar { display: flex; align-items: center; gap: 10px; }
+.ib {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--card);
+  font-size: 28px;
+  flex: none;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.14);
+}
+.ib:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.14); }
+.prog { flex: 1; height: 18px; background: var(--soft); border-radius: 999px; overflow: hidden; border: 3px solid var(--card); }
+.prog i { display: block; height: 100%; width: 0; background: var(--green); border-radius: 999px; transition: width 0.4s; }
+.stage { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding-top: 12px; }
+.prompt {
+  background: var(--card);
+  border-radius: 28px;
+  padding: 18px;
+  text-align: center;
+  min-height: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.1);
+}
+.ask { font-weight: 800; font-size: clamp(22px, 5.2vw, 29px); text-align: center; margin: 0; line-height: 1.18; }
+.choices { display: grid; gap: 14px; grid-template-columns: repeat(var(--c, 3), minmax(0, 1fr)); }
+.ch {
+  background: var(--card);
+  border-radius: 24px;
+  min-height: 108px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 0 7px 0 rgba(0,0,0,0.15);
+  transition: opacity 0.25s, transform 0.1s;
+}
+.ch:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+.ch .e { font-size: clamp(44px, 11vw, 62px); line-height: 1.1; }
+.ch .t { font-size: clamp(17px, 4vw, 21px); font-weight: 700; line-height: 1.15; text-align: center; }
+.ch .n { font-weight: 800; font-size: clamp(46px, 12vw, 68px); line-height: 1; }
+.ch .w { font-size: clamp(30px, 7.5vw, 44px); font-weight: 800; line-height: 1.1; }
+.ch.ok { background: var(--green); color: #fff; animation: pop 0.4s; }
+.ch.no { opacity: 0.28; pointer-events: none; animation: shake 0.35s; }
+
+/* Interactive counting & math visualizers */
+.obj {
+  font-size: clamp(34px, 8.5vw, 50px);
+  line-height: 1.1;
+  padding: 4px 6px;
+  border-radius: 16px;
+  background: transparent;
+  position: relative;
+  min-width: 52px;
+  min-height: 52px;
+}
+.obj.got { background: var(--soft); transform: scale(1.05); }
+.obj.crossed { opacity: 0.38; text-decoration: line-through; }
+.obj b {
+  position: absolute;
+  right: -2px;
+  top: -6px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  border-radius: 999px;
+  min-width: 24px;
+  height: 24px;
+  line-height: 24px;
+  font-weight: 800;
+}
+.math-eq {
+  width: 100%;
+  font-weight: 800;
+  font-size: clamp(28px, 7vw, 42px);
+  color: var(--blue);
+  margin-top: 6px;
+}
+.math-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--soft);
+  padding: 8px 12px;
+  border-radius: 20px;
+}
+.math-op { font-weight: 900; font-size: 36px; color: var(--coral); padding: 0 6px; }
+.seq { font-weight: 800; font-size: clamp(42px, 11vw, 66px); letter-spacing: 3px; }
+.seq .q { color: var(--coral); }
+
+/* Story & Informational */
+.story { background: var(--card); border-radius: 28px; padding: 20px; box-shadow: 0 6px 0 rgba(0,0,0,0.1); }
+.story .art { font-size: clamp(58px, 15vw, 90px); text-align: center; line-height: 1.1; }
+.story h2 { text-align: center; margin: 4px 0 10px; font-size: 26px; }
+.story p { font-size: clamp(21px, 4.8vw, 26px); line-height: 1.6; margin: 0; }
+.story span { border-radius: 8px; padding: 1px 3px; transition: background 0.2s; }
+.story span.rd { background: #ffe680; color: #1e2b66; }
+.row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.pill {
+  background: var(--card);
+  border-radius: 999px;
+  padding: 14px 26px;
+  font-weight: 800;
+  font-size: 21px;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.14);
+}
+.pill:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.14); }
+.pill.go { background: var(--blue); color: #fff; box-shadow: 0 5px 0 var(--blue-d); }
+
+/* Word Builder */
+.slots { display: flex; gap: 10px; justify-content: center; }
+.slot {
+  width: clamp(54px, 14vw, 76px);
+  height: clamp(64px, 16vw, 86px);
+  border-bottom: 6px solid var(--blue);
+  font-size: clamp(42px, 11vw, 60px);
+  font-weight: 800;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.slot.fill { color: var(--green); animation: pop 0.3s; }
+.letters { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.lt {
+  width: clamp(64px, 16vw, 82px);
+  height: clamp(64px, 16vw, 82px);
+  border-radius: 20px;
+  background: var(--card);
+  font-size: clamp(36px, 9.5vw, 50px);
+  font-weight: 800;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+}
+.lt.used { opacity: 0.25; pointer-events: none; }
+.lt.bad { animation: shake 0.35s; }
+
+/* Done & Break Screen */
+#done, #breakScreen { align-items: center; justify-content: center; text-align: center; gap: 16px; }
+#done .stars { font-size: clamp(60px, 17vw, 96px); letter-spacing: 6px; }
+#done h1, #breakScreen h1 { font-size: clamp(34px, 8vw, 52px); margin: 0; }
+.conf { position: fixed; top: -60px; font-size: 36px; pointer-events: none; animation: fall linear forwards; z-index: 9; }
+
+/* Grown-ups */
+#grown .panel { background: var(--card); border-radius: 24px; padding: 18px; margin-top: 12px; }
+#grown table { width: 100%; border-collapse: collapse; font-size: 16px; }
+#grown td, #grown th { padding: 9px 6px; border-bottom: 1px solid var(--soft); text-align: left; }
+#grown td.r, #grown th.r { text-align: right; white-space: nowrap; }
+#grown p { font-size: 16px; line-height: 1.5; }
+#grown input, #grown select {
+  font: inherit;
+  font-size: 18px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--muted);
+  background: var(--soft);
+  color: var(--ink);
+  width: 100%;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.gate { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 20px; }
+.gate input { width: 110px !important; }
+.stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+.scard { background: var(--soft); border-radius: 16px; padding: 12px; text-align: center; }
+.scard b { display: block; font-size: 24px; color: var(--blue); }
+.scard span { font-size: 13px; color: var(--muted); font-weight: 700; }
+
+.adv{width:100%;background:var(--coral);color:#fff;border-radius:28px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 7px 0 var(--coral-d);text-align:left;margin-bottom:6px}
+.adv:active{transform:translateY(5px);box-shadow:0 2px 0 var(--coral-d)}
+.adv .rk{font-size:clamp(48px,13vw,64px);line-height:1}
+.adv b{display:block;font-size:clamp(22px,5.6vw,28px);line-height:1.1}
+.adv .stops{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.adv .stop{background:rgba(255,255,255,.25);border-radius:999px;padding:3px 10px;font-size:20px}
+.adv .stop.done{background:#fff;color:var(--green)}
+.adv.complete{background:var(--green);box-shadow:0 7px 0 var(--green-d)}
+#checkpoint{align-items:center;justify-content:center;text-align:center;gap:16px}
+#checkpoint .nx{font-size:clamp(90px,26vw,140px);line-height:1}
+#checkpoint h1{font-size:clamp(30px,7.5vw,46px);margin:0}
+.trail{display:flex;gap:8px;justify-content:center;font-size:30px}
+.trail span{opacity:.35}.trail span.on{opacity:1}
+#backupTxt{min-height:110px;font-size:13px !important;font-family:ui-monospace,monospace}
+@keyframes pop { 50% { transform: scale(1.12); } }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes bob { 50% { transform: translateY(-12px) rotate(6deg); } }
+@keyframes fall { to { transform: translateY(115vh) rotate(540deg); } }
+@media(prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<section id="splash" class="screen on">
+  <div class="sun">🌟</div>
+  <h1 id="splashName">Star Learner</h1>
+  <button class="big" id="startBtn">▶ Play!</button>
+  <div class="audio-warn" id="audioWarn" hidden>🔊 Turn up your volume and switch off Silent Mode so you can hear the stories!</div>
+</section>
+
+<section id="home" class="screen">
+  <div class="top">
+    <h1 class="hi" id="hiName">Hi!</h1>
+    <div class="badges">
+      <div class="starpill" id="streakPill" title="Daily Streak">🔥 <span id="streakCount">1</span></div>
+      <div class="starpill">⭐ <span id="starCount">0</span></div>
+    </div>
+  </div>
+  <button class="adv" id="advBtn" type="button"><span class="rk">🚀</span><span><b id="advTitle">Today's Adventure</b><span class="stops" id="advStops"></span></span></button>
+  <div class="quest-banner" id="questBanner">
+    <div>
+      <div style="font-weight:800;font-size:17px">Today's Star Goal</div>
+      <div style="font-size:14px;color:var(--muted)" id="questSub">Play 1 Reading + 1 Math game!</div>
+    </div>
+    <div class="quest-steps">
+      <div class="qchip" id="qRead">📖 <span>Read</span></div>
+      <div class="qchip" id="qMath">🔢 <span>Math</span></div>
+    </div>
+  </div>
+  <div class="sect">📖 Reading</div>
+  <div class="grid" id="gridRead"></div>
+  <div class="sect">🔢 Math</div>
+  <div class="grid" id="gridMath"></div>
+  <button class="grown" id="grownBtn">For grown-ups</button>
+</section>
+
+<section id="game" class="screen">
+  <div class="gbar">
+    <button class="ib" id="homeBtn" aria-label="Home">🏠</button>
+    <div class="prog"><i id="progBar"></i></div>
+    <button class="ib" id="sayBtn" aria-label="Say it again">🔊</button>
+  </div>
+  <div class="stage" id="stage"></div>
+</section>
+
+<section id="done" class="screen">
+  <div class="stars" id="doneStars">⭐⭐⭐</div>
+  <h1 id="doneMsg">Amazing!</h1>
+  <div class="row">
+    <button class="pill go" id="againBtn">🔁 Again</button>
+    <button class="pill" id="doneHome">🏠 Home</button>
+  </div>
+</section>
+
+<section id="checkpoint" class="screen">
+  <div class="trail" id="cpTrail"></div>
+  <h1 id="cpMsg">Great job!</h1>
+  <div class="nx" id="cpNext">🍎</div>
+  <button class="big" id="cpGo">Next ▶</button>
+  <button class="pill" id="cpHome">🏠 Home</button>
+</section>
+
+<section id="breakScreen" class="screen">
+  <div style="font-size:96px">🧸💤</div>
+  <h1>Great Practice Today!</h1>
+  <p style="font-size:22px;max-width:440px">You played for 12 minutes and earned lots of stars! Time to rest your eyes and play offline.</p>
+  <button class="pill go" id="breakHome">🏠 Back to Home</button>
+</section>
+
+<section id="grown" class="screen">
+  <div class="gbar">
+    <button class="ib" id="grownBack" aria-label="Back">⬅️</button>
+    <h2 style="margin:0">For grown-ups</h2>
+  </div>
+  <div class="panel" id="gatePanel">
+    <div class="gate">
+      <span id="gateQ">What is 12 + 9?</span>
+      <input id="gateIn" inputmode="numeric" autocomplete="off">
+      <button class="pill go" id="gateGo">Open</button>
+    </div>
+  </div>
+  <div id="grownBody" hidden>
+    <div class="panel">
+      <div class="stat-cards">
+        <div class="scard"><b id="gTodayMin">0m</b><span>Today</span></div>
+        <div class="scard"><b id="gStreak">1d</b><span>Streak</span></div>
+        <div class="scard"><b id="gTotalStars">0</b><span>Total Stars</span></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Activity</th><th class="r">Level</th><th class="r">Rounds</th><th class="r">1st-Try</th></tr>
+        </thead>
+        <tbody id="statRows"></tbody>
+      </table>
+      <p style="margin-bottom:0"><b>Focus Priority (★):</b> Story Time, Fact Finder, Add &amp; Take Away, Count It, and Shape Hunt target Emerging/Early K growth areas. Levels adjust automatically (up at &ge;85% 1st-try, ease back at &le;50%).</p>
+    </div>
+    <div class="panel">
+      <p style="margin-top:0"><b>Child's Display Name</b> (stored locally on this device only)</p>
+      <input id="nameIn" maxlength="20">
+      <p style="margin-top:14px"><b>Daily Gentle Break Reminder</b></p>
+      <select id="limitIn">
+        <option value="0">Off (no timer)</option>
+        <option value="10">10 minutes</option>
+        <option value="12" selected>12 minutes (recommended)</option>
+        <option value="15">15 minutes</option>
+      </select>
+      <div class="row" style="margin-top:16px;justify-content:flex-start">
+        <button class="pill go" id="saveName">Save Settings</button>
+        <button class="pill" id="resetBtn">Reset Progress</button>
+      </div>
+      <p id="resetNote" style="color:var(--coral);font-weight:700"></p>
+      <p><b>Move progress between devices</b> (nothing is uploaded): tap <i>Copy backup</i> on one device, send the text to yourself, paste it into the box on the other device and tap <i>Load backup</i>.</p>
+      <textarea id="backupTxt" spellcheck="false" style="width:100%;border-radius:12px;padding:10px;border:2px solid var(--muted);background:var(--soft);color:var(--ink);-webkit-user-select:text;user-select:text"></textarea>
+      <div class="row" style="margin-top:10px;justify-content:flex-start">
+        <button class="pill" id="copyBackup">📋 Copy backup</button>
+        <button class="pill" id="loadBackup">📥 Load backup</button>
+      </div>
+      <p id="backupNote" style="font-weight:700"></p>
+      <p style="font-size:13px;color:var(--muted)">Star Learner v2 · merged build (Claude + Gemini + ChatGPT ideas)</p>
+      <p style="margin-bottom:0"><b>iPhone / iPad Tip:</b> Ensure the side Silent switch is off and volume is up. For independent use, enable <i>Settings &rarr; Accessibility &rarr; Guided Access</i> so she stays inside Star Learner.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+{
+/* ---------- local storage & daily session tracking ---------- */
+const todayKey = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('sl_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('sl_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+let data = store.get('data', null) || {
+  name: 'Star',
+  stars: 0,
+  limitMin: 12,
+  games: {},
+  seen: {},
+  daily: {}
+};
+if (!data.daily) data.daily = {};
+if (typeof data.limitMin !== 'number') data.limitMin = 12;
+
+const getToday = () => {
+  const k = todayKey();
+  if (!data.daily[k]) data.daily[k] = { sec: 0, read: 0, math: 0 };
+  return data.daily[k];
+};
+
+function getStreak() {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 60; i++) {
+    const k = todayKey(d);
+    const rec = data.daily[k];
+    if (rec && (rec.read > 0 || rec.math > 0 || rec.sec >= 60)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else if (i === 0) {
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return Math.max(1, streak);
+}
+
+const save = () => store.set('data', data);
+const G = id => data.games[id] || (data.games[id] = { level: 1, right: 0, tries: 0, rounds: 0 });
+
+/* Active time tracker (counts only while app is visible and in a game) */
+let breakShownToday = false;
+setInterval(() => {
+  if (document.visibilityState === 'visible' && document.getElementById('game').classList.contains('on')) {
+    const t = getToday();
+    t.sec += 5;
+    save();
+  }
+}, 5000);
+
+/* ---------- speech + WebAudio ---------- */
+const hasTTS = 'speechSynthesis' in window;
+let voice = null;
+function pickVoice() {
+  if (!hasTTS) return;
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v => /^en-US/.test(v.lang) && /Samantha|Ava|Allison|Nicky|Google US English/i.test(v.name))
+       || vs.find(v => /^en-US/.test(v.lang))
+       || vs.find(v => /^en/.test(v.lang))
+       || null;
+  if (!vs.length && document.getElementById('audioWarn')) {
+    document.getElementById('audioWarn').hidden = false;
+  }
+}
+if (hasTTS) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+} else {
+  document.getElementById('audioWarn').hidden = false;
+}
+
+let sayTok = 0;
+function say(text, onend) {
+  const tok = ++sayTok;
+  if (!hasTTS) { if (onend) setTimeout(onend, 350); return; }
+  try { speechSynthesis.cancel(); } catch (e) {}
+  setTimeout(() => {
+    if (tok !== sayTok) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      if (voice) u.voice = voice;
+      u.rate = 0.86;
+      u.pitch = 1.08;
+      let done = false;
+      const finishSay = () => { if (!done && tok === sayTok) { done = true; if (onend) onend(); } };
+      u.onend = finishSay;
+      u.onerror = finishSay;
+      speechSynthesis.speak(u);
+      // Fallback watchdog in case iOS Safari drops onend
+      setTimeout(finishSay, Math.max(3000, text.length * 130));
+    } catch (e) {
+      if (onend) onend();
+    }
+  }, 65);
+}
+
+let actx = null;
+function unlockAudio() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch (e) {}
+}
+function tone(fs, dur = 0.12, type = 'sine') {
+  try {
+    unlockAudio();
+    let t = actx.currentTime;
+    fs.forEach(f => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type;
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g);
+      g.connect(actx.destination);
+      o.start(t);
+      o.stop(t + dur);
+      t += dur * 0.8;
+    });
+  } catch (e) {}
+}
+const ding = () => tone([660, 880, 1320], 0.13);
+const boop = () => tone([220, 180], 0.15, 'triangle');
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const PRAISE = ['Great job!', 'You got it!', 'Awesome!', 'Super!', 'Yes! Nice work!', 'You are a star!', 'Way to go!'];
+const RETRY = ['Oops! Try again.', 'Almost! Listen closely and try again.', 'Not quite. You can do it!'];
+
+function nearNums(ans, n, min, max) {
+  const s = new Set([ans]);
+  let g = 0;
+  while (s.size < n && g++ < 200) {
+    const d = ans + pick([-3, -2, -1, 1, 2, 3, 5, -5, 10, -10]);
+    if (d >= min && d <= max) s.add(d);
+  }
+  let f = min;
+  while (s.size < n) { if (!s.has(f)) s.add(f); f++; }
+  return shuffle([...s]);
+}
+const esc = v => String(v).replace(/[<>&"']/g, '');
+const numTxt = n => `<span class="n">${n}</span>`;
+
+/* ---------- content banks ---------- */
+const THINGS = [
+  ['🍎', 'apples'], ['⭐', 'stars'], ['🐞', 'ladybugs'], ['🚗', 'cars'],
+  ['🐟', 'fish'], ['🌸', 'flowers'], ['🍪', 'cookies'], ['🎈', 'balloons'],
+  ['🐤', 'chicks'], ['⚽', 'balls'], ['🍓', 'strawberries'], ['🦋', 'butterflies'],
+  ['🐸', 'frogs'], ['🧁', 'cupcakes']
+];
+
+/* 10 Literature Stories with beginning/middle/end sequencing & character/why questions */
+const STORIES = [
+  { t: 'Max the Puppy', art: '🐶🔴',
+    s: ['Max is a little brown puppy.', 'One day, Max lost his red ball.', 'First, he looked under the bed.', 'Next, he looked in the yard.', 'At last, he found the ball in his dog house!', 'Max wagged his tail because he was so happy.'],
+    q: [
+      ['Who is the story about?', [['🐶', 'a puppy', 1], ['🐱', 'a cat'], ['🐦', 'a bird']]],
+      ['What did Max lose?', [['🔴', 'a red ball', 1], ['🦴', 'a bone'], ['👟', 'a shoe']]],
+      ['Where did Max look first?', [['🛏️', 'under the bed', 1], ['🌳', 'in the yard'], ['🏠', 'in the dog house']]],
+      ['Why did Max wag his tail at the end?', [['😀', 'he was happy', 1], ['😢', 'he was sad'], ['😴', 'he was sleepy']]]
+    ]
+  },
+  { t: "Lily's Garden", art: '👧🌻',
+    s: ['Lily planted a tiny seed in the dirt.', 'She gave it water every morning.', 'The warm sun helped it grow.', 'Soon, a big yellow flower popped up!', 'Lily picked it and gave it to her grandma.'],
+    q: [
+      ['What did Lily plant first?', [['🌱', 'a tiny seed', 1], ['🍎', 'an apple'], ['🪨', 'a rock']]],
+      ['What helped the seed grow?', [['☀️', 'water and sun', 1], ['🌙', 'the moon'], ['❄️', 'cold snow']]],
+      ['What happened after the seed grew?', [['🌻', 'a flower popped up', 1], ['🌳', 'an oak tree grew'], ['🥕', 'a carrot grew']]],
+      ['Who did Lily give the flower to?', [['👵', 'her grandma', 1], ['🐶', 'her puppy'], ['👨‍🏫', 'her teacher']]]
+    ]
+  },
+  { t: 'The Rainy Day Fort', art: '🌧️⛺',
+    s: ['It was raining outside, so Ben could not go to the park.', 'Ben felt sad at first.', 'Then his big sister had a fun idea.', 'They built a cozy fort with pillows and blankets!', 'Ben smiled and said it was the best day ever.'],
+    q: [
+      ['Why could Ben not go to the park?', [['🌧️', 'it was raining', 1], ['🌙', 'it was dark'], ['🤒', 'he was sick']]],
+      ['How did Ben feel at the beginning?', [['😢', 'sad', 1], ['😀', 'excited'], ['😠', 'mad']]],
+      ['What did they build together?', [['⛺', 'a blanket fort', 1], ['🚗', 'a toy car'], ['🏰', 'a sandcastle']]],
+      ['How did Ben feel at the end?', [['😄', 'happy', 1], ['😨', 'scared'], ['😴', 'tired']]]
+    ]
+  },
+  { t: 'Turtle and Rabbit', art: '🐢🐰',
+    s: ['Turtle and Rabbit decided to have a race.', 'Rabbit ran super fast at the start.', 'In the middle of the race, Rabbit stopped to take a nap.', 'Turtle kept walking, slow and steady.', 'Turtle crossed the finish line first!'],
+    q: [
+      ['Who raced against Turtle?', [['🐰', 'Rabbit', 1], ['🐶', 'Puppy'], ['🐻', 'Bear']]],
+      ['What did Rabbit do in the middle of the race?', [['😴', 'took a nap', 1], ['🍕', 'ate lunch'], ['🏊', 'went swimming']]],
+      ['How did Turtle win the race?', [['🐢', 'kept walking steady', 1], ['🚀', 'used a rocket'], ['🚲', 'rode a bike']]],
+      ['Who crossed the finish line first?', [['🐢', 'Turtle', 1], ['🐰', 'Rabbit'], ['🦊', 'Fox']]]
+    ]
+  },
+  { t: 'Mia Makes a Cake', art: '👩‍🍳🎂',
+    s: ['It was Dad’s birthday.', 'Mia wanted to surprise him with a cake.', 'First, she mixed the eggs and flour in a bowl.', 'Next, Mom helped her bake it in the oven.', 'Last, Mia put blue frosting on top.', 'Dad gave Mia a giant hug!'],
+    q: [
+      ['Whose birthday was it?', [['👨', 'Dad', 1], ['👵', 'Grandma'], ['👧', 'Mia']]],
+      ['What did Mia do first?', [['🥣', 'mixed eggs and flour', 1], ['🎁', 'wrapped a gift'], ['🎈', 'blew up balloons']]],
+      ['What did Mia do last?', [['🧁', 'put frosting on top', 1], ['🛒', 'went to the store'], ['🧹', 'swept the floor']]],
+      ['Why did Dad give Mia a giant hug?', [['❤️', 'she made him a cake', 1], ['🌧️', 'it was raining'], ['🐶', 'they got a puppy']]]
+    ]
+  },
+  { t: 'The Lost Kitten', art: '🐱🌳',
+    s: ['A little gray kitten climbed up a tall tree.', 'The kitten was scared to come down.', 'Sam heard the kitten say meow.', 'Sam got a ladder and climbed up carefully.', 'He carried the kitten down safely to the grass.'],
+    q: [
+      ['Where did the kitten climb?', [['🌳', 'up a tall tree', 1], ['🏠', 'on a roof'], ['🚗', 'on a car']]],
+      ['How did the kitten feel in the tree?', [['😨', 'scared', 1], ['😀', 'happy'], ['😋', 'hungry']]],
+      ['What did Sam use to reach the kitten?', [['🪜', 'a ladder', 1], ['🚲', 'a bike'], ['🪁', 'a kite']]],
+      ['What happened at the end of the story?', [['🐱', 'Sam carried it down', 1], ['🌧️', 'it started snowing'], ['🐦', 'a bird flew away']]]
+    ]
+  },
+  { t: 'The Missing Mittens', art: '🧤❄️',
+    s: ['Snow was falling outside.', 'Nora put on her warm coat and boots.', 'She looked for her red mittens, but one was missing!', 'First, she checked her coat pockets.', 'Next, she looked under the sofa and found it!', 'Nora ran outside to build a snowman.'],
+    q: [
+      ['What was Nora missing?', [['🧤', 'a red mitten', 1], ['👟', 'her left shoe'], ['🎩', 'her sun hat']]],
+      ['Where did Nora look first?', [['🧥', 'in her pockets', 1], ['🛏️', 'under her bed'], ['🚗', 'in the car']]],
+      ['Where did Nora find the mitten?', [['🛋️', 'under the sofa', 1], ['🌳', 'in a tree'], ['📦', 'in a box']]],
+      ['What did Nora do after she found it?', [['⛄', 'built a snowman', 1], ['🏊', 'went swimming'], ['😴', 'went to bed']]]
+    ]
+  },
+  { t: 'Leo Shares His Lunch', art: '🥪🍎',
+    s: ['At lunchtime, Leo opened his lunchbox.', 'He saw two crunchy red apples inside.', 'His friend Maya forgot her fruit at home.', 'Leo smiled and gave one apple to Maya.', 'Maya said thank you, and they ate together.'],
+    q: [
+      ['What did Leo have two of?', [['🍎', 'red apples', 1], ['🍪', 'cookies'], ['🍌', 'bananas']]],
+      ['Why did Leo give an apple to Maya?', [['🤝', 'Maya forgot her fruit', 1], ['🐶', 'a dog ate it'], ['🌧️', 'it fell in mud']]],
+      ['How did Leo and Maya feel?', [['😊', 'happy friends', 1], ['😠', 'angry'], ['😨', 'afraid']]]
+    ]
+  },
+  { t: 'The Campfire Night', art: '🏕️✨',
+    s: ['Zoe and her dad pitched a tent in the woods.', 'When night came, the sky grew dark.', 'Dad lit a safe campfire to keep warm.', 'They toasted marshmallows and looked at bright stars.', 'Zoe fell asleep listening to crickets chirp.'],
+    q: [
+      ['Where did Zoe and her dad camp?', [['🌲', 'in the woods', 1], ['🏖️', 'on the beach'], ['🏙️', 'in a tall city']]],
+      ['When did Dad light the campfire?', [['🌙', 'when night came', 1], ['☀️', 'in the morning'], ['🌧️', 'during a storm']]],
+      ['What did they see in the night sky?', [['✨', 'bright stars', 1], ['🌈', 'a rainbow'], ['✈️', 'ten airplanes']]]
+    ]
+  },
+  { t: 'Benny’s Lost Tooth', art: '🦷🧚',
+    s: ['Benny had a wiggly front tooth.', 'While eating a crunchy carrot, the tooth popped out!', 'Benny was surprised, and it did not hurt at all.', 'Before bed, he put the tiny tooth under his pillow.', 'In the morning, he found a shiny coin!'],
+    q: [
+      ['What happened while Benny ate a carrot?', [['🦷', 'his tooth popped out', 1], ['👟', 'his shoe broke'], ['🎈', 'his balloon popped']]],
+      ['Where did Benny put his tooth before bed?', [['🛏️', 'under his pillow', 1], ['🥣', 'in a bowl'], ['🎒', 'in his backpack']]],
+      ['What did Benny find in the morning?', [['🪙', 'a shiny coin', 1], ['🐸', 'a green frog'], ['🍎', 'a big apple']]]
+    ]
+  }
+];
+
+/* 10 Informational Passages with key details, sequence & facts */
+const FACTS = [
+  { t: 'Penguins', art: '🐧❄️',
+    s: ['Penguins are birds, but they cannot fly.', 'Instead, their wings help them swim very fast!', 'Penguins live where it is icy and cold.', 'They dive into the ocean to catch fish.', 'A penguin dad keeps his egg warm on top of his feet.'],
+    q: [
+      ['How do penguins move through the water?', [['🏊', 'they swim fast', 1], ['✈️', 'they fly high'], ['🚲', 'they ride bikes']]],
+      ['Where do penguins live?', [['🧊', 'where it is cold', 1], ['🏜️', 'in a hot desert'], ['🌴', 'in a jungle']]],
+      ['What do penguins eat?', [['🐟', 'fish', 1], ['🍕', 'pizza'], ['🥕', 'carrots']]],
+      ['How does the penguin dad keep the egg warm?', [['🦶', 'on top of his feet', 1], ['🔥', 'by a campfire'], ['🛏️', 'in a blanket']]]
+    ]
+  },
+  { t: 'The Moon', art: '🌙🚀',
+    s: ['The moon travels in a circle around the Earth.', 'At night, the moon looks bright in the sky.', 'The moon does not make its own light.', 'Light from the sun bounces off the moon!', 'Astronauts flew in a rocket to walk on the moon.'],
+    q: [
+      ['What does the moon travel around?', [['🌍', 'the Earth', 1], ['🚗', 'a race car'], ['🌳', 'a tall tree']]],
+      ['Where does the moon get its light?', [['☀️', 'from the sun', 1], ['💡', 'from a flashlight'], ['🔥', 'from candles']]],
+      ['Who flew in a rocket to walk on the moon?', [['👩‍🚀', 'astronauts', 1], ['🐄', 'cows'], ['🐟', 'fish']]]
+    ]
+  },
+  { t: 'Busy Bees', art: '🐝🌼',
+    s: ['Bees are small flying insects.', 'Every bee has six legs and two pairs of wings.', 'Bees fly from flower to flower drinking sweet nectar.', 'They take nectar back to their hive to make honey.', 'Bees also help flowers grow new seeds!'],
+    q: [
+      ['How many legs does a bee have?', [['6️⃣', 'six legs', 1], ['4️⃣', 'four legs'], ['8️⃣', 'eight legs']]],
+      ['What sweet food do bees make?', [['🍯', 'honey', 1], ['🥛', 'milk'], ['🧀', 'cheese']]],
+      ['Where do bees live and store honey?', [['🛖', 'in a hive', 1], ['🌊', 'under the ocean'], ['🚗', 'in a garage']]]
+    ]
+  },
+  { t: 'How Plants Grow', art: '🌱☀️',
+    s: ['A plant needs three main things to grow.', 'It needs water, sunlight, and fresh air.', 'First, roots grow down to drink water from the soil.', 'Next, green leaves open up to catch sunlight.', 'With water and sun, the plant grows tall and strong!'],
+    q: [
+      ['What do a plant’s roots do first?', [['💧', 'drink water from soil', 1], ['🎵', 'sing a song'], ['👀', 'look around']]],
+      ['What part catches the sunlight?', [['🍃', 'green leaves', 1], ['🪨', 'grey rocks'], ['👟', 'old shoes']]],
+      ['What three things does a plant need?', [['☀️', 'water, sun, and air', 1], ['🍬', 'candy and juice'], ['📺', 'TV and toys']]]
+    ]
+  },
+  { t: 'Firefighters', art: '🚒👩‍🚒',
+    s: ['Fire trucks are bright red so people can see them.', 'They carry long ladders and heavy water hoses.', 'When an alarm rings, firefighters put on safety gear.', 'The loud siren tells cars to pull over and stop.', 'Firefighters work together to keep people safe.'],
+    q: [
+      ['Why is a fire truck siren so loud?', [['🚗', 'so cars pull over', 1], ['🎵', 'to play dance music'], ['😴', 'to help people nap']]],
+      ['What do firefighters carry on the truck?', [['🪜', 'ladders and hoses', 1], ['🎂', 'birthday cakes'], ['🎨', 'paint brushes']]],
+      ['What is a firefighter’s main job?', [['🦺', 'keep people safe', 1], ['🍕', 'deliver pizza'], ['✈️', 'fly airplanes']]]
+    ]
+  },
+  { t: 'Life Cycle of a Frog', art: '🐸🪷',
+    s: ['A frog begins life as a tiny egg in a pond.', 'Next, a tadpole hatches out of the egg.', 'A tadpole has a long tail and swims like a fish.', 'As it grows, it sprouts back legs and front legs.', 'Finally, its tail shrinks and it becomes a hopping frog!'],
+    q: [
+      ['What does a frog start out as?', [['🥚', 'a tiny egg', 1], ['🐟', 'a goldfish'], ['🌸', 'a water lily']]],
+      ['What hatches out of the egg first?', [['〰️', 'a tadpole', 1], ['🐤', 'a yellow chick'], ['🐛', 'a caterpillar']]],
+      ['What happens last as the tadpole grows?', [['🐸', 'it becomes a frog', 1], ['🦅', 'it grows wings'], ['🐢', 'it grows a shell']]]
+    ]
+  },
+  { t: 'Sea Turtles', art: '🐢🌊',
+    s: ['Sea turtles spend almost their whole lives in the ocean.', 'Instead of feet, they have flat flippers for swimming.', 'Sea turtles swim to the top of the water to breathe air.', 'Mother sea turtles crawl onto sandy beaches to lay eggs.', 'Baby turtles hatch and hurry back to the waves!'],
+    q: [
+      ['What helps sea turtles swim in the ocean?', [['🏊', 'flat flippers', 1], ['🪽', 'feathered wings'], ['🛞', 'round wheels']]],
+      ['Why do sea turtles swim to the top of the water?', [['💨', 'to breathe air', 1], ['📞', 'to make a call'], ['📺', 'to watch TV']]],
+      ['Where do baby sea turtles go after hatching?', [['🌊', 'into the ocean waves', 1], ['🌳', 'up into the trees'], ['🏔️', 'up a snowy mountain']]]
+    ]
+  },
+  { t: 'The Four Seasons', art: '🍂⛄',
+    s: ['Every year has four seasons: spring, summer, fall, and winter.', 'In spring, rain falls and new flowers bloom.', 'Summer brings hot, sunny days for swimming.', 'In fall, leaves turn red and orange and drop from trees.', 'Winter is the coldest season, when snow can fall!'],
+    q: [
+      ['In which season do leaves turn red and fall down?', [['🍂', 'fall', 1], ['☀️', 'summer'], ['🌷', 'spring']]],
+      ['Which season is the coldest?', [['⛄', 'winter', 1], ['🏖️', 'summer'], ['🌼', 'spring']]],
+      ['What happens in spring?', [['🌸', 'new flowers bloom', 1], ['❄️', 'snowstorms cover trees'], ['🎃', 'pumpkins freeze']]]
+    ]
+  },
+  { t: 'Your Amazing Heart', art: '❤️🏃',
+    s: ['Your heart is a strong muscle inside your chest.', 'It is about the size of your closed fist.', 'All day and night, your heart pumps blood around your body.', 'When you run and jump, your heart beats faster!', 'Running and playing keep your heart healthy and strong.'],
+    q: [
+      ['How big is your heart?', [['✊', 'the size of your fist', 1], ['🚗', 'as big as a car'], ['🐜', 'as tiny as an ant']]],
+      ['What happens to your heart when you run?', [['💓', 'it beats faster', 1], ['🛑', 'it stops completely'], ['❄️', 'it turns cold']]],
+      ['What does your heart pump through your body?', [['🩸', 'blood', 1], ['🥛', 'milk'], ['🧃', 'apple juice']]]
+    ]
+  },
+  { t: 'Why We Sleep', art: '😴🛌',
+    s: ['Every animal and person needs sleep.', 'While you sleep, your body rests and grows stronger.', 'Your brain sorts out everything you learned that day!', 'Getting enough sleep helps you feel happy and ready to play.', 'Most kids need about ten hours of sleep each night.'],
+    q: [
+      ['What does your body do while you sleep?', [['💪', 'rests and grows', 1], ['🏃', 'runs a marathon'], ['🍕', 'cooks dinner']]],
+      ['What does your brain do while you sleep?', [['🧠', 'sorts what you learned', 1], ['🎈', 'blows up balloons'], ['🚗', 'drives a bus']]],
+      ['How do you feel after a good night of sleep?', [['😄', 'happy and ready', 1], ['🤒', 'sick and grumpy'], ['😢', 'sad']]]
+    ]
+  }
+];
+
+const SIGHT1 = 'after again an any ask as by could every fly from give going had has her him his how just know let live may of old once open over put round some stop take thank them then think walk were when'.split(' ');
+const SIGHT2 = 'always around because been before best both buy call cold does fast first five found gave goes green its made many off or pull read right sing sit sleep tell their these those upon us use very wash which why wish work would write your'.split(' ');
+
+const CVC = [
+  ['cat', '🐱'], ['dog', '🐶'], ['sun', '☀️'], ['bus', '🚌'], ['pig', '🐷'],
+  ['hat', '🎩'], ['bed', '🛏️'], ['cup', '🥤'], ['fox', '🦊'], ['bug', '🐛'],
+  ['map', '🗺️'], ['pen', '🖊️'], ['box', '📦'], ['web', '🕸️'], ['bat', '🦇'],
+  ['hen', '🐔'], ['jet', '✈️'], ['mop', '🧹'], ['van', '🚐'], ['log', '🪵']
+];
+const BLEND = [
+  ['frog', '🐸'], ['crab', '🦀'], ['drum', '🥁'], ['flag', '🚩'], ['sled', '🛷'],
+  ['clam', '🦪'], ['plum', '🍑'], ['swim', '🏊'], ['snap', '🫰'], ['spot', '🔴'],
+  ['stop', '🛑'], ['grin', '😁'], ['trip', '🧳'], ['slug', '🐌'], ['star', '⭐']
+];
+// Long-vowel Magic-E & sight-word spelling for Phonics growth target
+const MAGICE = [
+  ['cake', '🎂'], ['bike', '🚲'], ['kite', '🪁'], ['bone', '🦴'], ['rose', '🌹'],
+  ['five', '5️⃣'], ['nine', '9️⃣'], ['wave', '🌊'], ['nose', '👃'], ['cube', '🧊'],
+  ['lake', '🏞️'], ['rope', '🪢'], ['gate', '🚧'], ['hive', '🛖']
+];
+const ABC = 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+/* Shapes + Spatial Positions */
+const SH = {
+  circle: '<circle cx="50" cy="50" r="40"/>',
+  square: '<rect x="12" y="12" width="76" height="76" rx="3"/>',
+  triangle: '<polygon points="50,10 92,88 8,88"/>',
+  rectangle: '<rect x="4" y="26" width="92" height="48" rx="3"/>',
+  oval: '<ellipse cx="50" cy="50" rx="44" ry="28"/>',
+  hexagon: '<polygon points="27,10 73,10 96,50 73,90 27,90 4,50"/>',
+  star: '<polygon points="50,6 61,38 95,38 67,58 78,92 50,71 22,92 33,58 5,38 39,38"/>',
+  diamond: '<polygon points="50,6 90,50 50,94 10,50"/>',
+  cube: '<polygon points="20,32 60,32 60,88 20,88" fill-opacity="1"/><polygon points="20,32 40,14 80,14 60,32" fill-opacity=".7"/><polygon points="60,32 80,14 80,70 60,88" fill-opacity=".5"/>',
+  sphere: '<defs><radialGradient id="sg" cx=".35" cy=".35"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="50" r="40"/><circle cx="50" cy="50" r="40" fill="url(#sg)"/>',
+  cone: '<polygon points="50,8 84,80 16,80"/><ellipse cx="50" cy="80" rx="34" ry="11" fill-opacity=".6"/>',
+  cylinder: '<rect x="22" y="20" width="56" height="62"/><ellipse cx="50" cy="82" rx="28" ry="10"/><ellipse cx="50" cy="20" rx="28" ry="10" fill-opacity=".6"/>'
+};
+const SIDES = { triangle: 3, square: 4, rectangle: 4, hexagon: 6, diamond: 4 };
+const COLS = ['#ff5d73', '#3a57e8', '#22b573', '#ff9f1c', '#9b5de5', '#00b4d8'];
+const shape = (n, c, sz = 86) => `<svg viewBox="0 0 100 100" width="${sz}" height="${sz}" fill="${c || pick(COLS)}" aria-hidden="true">${SH[n]}</svg>`;
+const S2 = ['circle', 'square', 'triangle', 'rectangle', 'oval', 'hexagon', 'star', 'diamond'];
+const S3 = ['cube', 'sphere', 'cone', 'cylinder'];
+
+function tenFrameSVG(count, showMissing = false) {
+  let cells = '';
+  for (let i = 0; i < 10; i++) {
+    const col = i % 5;
+    const row = Math.floor(i / 5);
+    const x = 10 + col * 46;
+    const y = 10 + row * 46;
+    cells += `<rect x="${x}" y="${y}" width="42" height="42" rx="6" fill="#fff" stroke="#3a57e8" stroke-width="3"/>`;
+    if (i < count) {
+      cells += `<circle cx="${x + 21}" cy="${y + 21}" r="14" fill="#ff5d73"/>`;
+    } else if (showMissing) {
+      cells += `<circle cx="${x + 21}" cy="${y + 21}" r="12" fill="none" stroke="#9b5de5" stroke-width="2.5" stroke-dasharray="4 3"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 246 108" width="246" height="108" aria-hidden="true">${cells}</svg>`;
+}
+
+function posSceneSVG(pos) {
+  // Draws a table/box and a red star in one of 4 unambiguous positions: above, below, next to, inside
+  const box = `<rect x="65" y="48" width="70" height="44" rx="8" fill="#3a57e8" fill-opacity="0.2" stroke="#3a57e8" stroke-width="4"/>`;
+  const starAt = (cx, cy) => `<text x="${cx}" y="${cy}" font-size="30" text-anchor="middle" dominant-baseline="central">⭐</text>`;
+  let star = '';
+  if (pos === 'above') star = starAt(100, 24);
+  if (pos === 'below') star = starAt(100, 114);
+  if (pos === 'next to') star = starAt(162, 70);
+  if (pos === 'inside') star = starAt(100, 70);
+  return `<svg viewBox="0 0 200 136" width="200" height="136" aria-hidden="true">${box}${star}</svg>`;
+}
+
+const WORDS = [
+  {ask:'Which one is a fruit?',a:['🍎','apple'],wrong:[['🧦','sock'],['🚗','car']]},
+  {ask:'Which one is a tool?',a:['🔨','hammer'],wrong:[['🍌','banana'],['🧸','teddy bear']]},
+  {ask:'Which one is an animal?',a:['🐸','frog'],wrong:[['🚪','door'],['🥣','bowl']]},
+  {ask:'Which one can you wear on your feet?',a:['👟','shoe'],wrong:[['🍉','watermelon'],['🧹','broom']]},
+  {ask:'Which one helps you draw a picture?',a:['🖍️','crayon'],wrong:[['🥄','spoon'],['🪥','toothbrush']]},
+  {ask:'Which one is a vehicle?',a:['🚌','bus'],wrong:[['🐈','cat'],['🍇','grapes']]},
+  {ask:'Which one is a kind of weather?',a:['🌧️','rain'],wrong:[['🍰','cake'],['🪑','chair']]},
+  {ask:'Which one is an insect?',a:['🐝','bee'],wrong:[['🐳','whale'],['🐶','dog']]},
+  {ask:'Which one do you use to measure how long something is?',a:['📏','ruler'],wrong:[['🪥','toothbrush'],['🥤','cup']]},
+  {ask:'Which one keeps you dry in the rain?',a:['☂️','umbrella'],wrong:[['🎈','balloon'],['🪁','kite']]},
+  {ask:'Which one carries books to school?',a:['🎒','backpack'],wrong:[['🧤','glove'],['🍴','fork']]},
+  {ask:'Which one makes music when you hit it?',a:['🥁','drum'],wrong:[['🪑','chair'],['🥦','broccoli']]},
+  {ask:'Which one is a vegetable?',a:['🥕','carrot'],wrong:[['🍩','donut'],['⚽','ball']]},
+  {ask:'Which one can fly?',a:['🦅','eagle'],wrong:[['🐢','turtle'],['🐄','cow']]},
+  {ask:'Which one lives in the ocean?',a:['🐙','octopus'],wrong:[['🐿️','squirrel'],['🐫','camel']]},
+  {ask:'Which one do you wear when it is cold?',a:['🧣','scarf'],wrong:[['🩳','shorts'],['🕶️','sunglasses']]},
+  {ask:'Which one is a shape?',a:['🔺','triangle'],wrong:[['🍞','bread'],['🐟','fish']]},
+  {ask:'A ring can go on your finger. Which one is a ring?',a:['💍','ring'],wrong:[['📞','phone'],['🧦','sock']]},
+  {ask:'Bark is a sound a dog makes. Which one is a dog?',a:['🐕','dog'],wrong:[['🌳','tree'],['🐈','cat']]},
+  {ask:'Which one do you use to eat soup?',a:['🥄','spoon'],wrong:[['✂️','scissors'],['🔑','key']]}
+];
+
+/* ---------- 9 games (8 original upgraded + new Add & Take Away for Number & Operations) ---------- */
+const GAMES = [
+  { id: 'story', area: 'read', em: '📚', nm: 'Story Time', sh: '#d94f63', kind: 'story', bank: STORIES, priority: true,
+    intro: 'Story time! Listen closely to the story, then answer the questions.' },
+  { id: 'facts', area: 'read', em: '🔎', nm: 'Fact Finder', sh: '#2f8f6a', kind: 'story', bank: FACTS, priority: true,
+    intro: 'Fact finder! Listen and learn true facts, then answer the questions.' },
+  { id: 'spell', area: 'read', em: '🔤', nm: 'Word Builder', sh: '#3a57e8', kind: 'spell', max: 3,
+    intro: 'Word builder! Listen to the word and tap the letters to spell it.' },
+  { id: 'sight', area: 'read', em: '👀', nm: 'Sight Words', sh: '#9b5de5', kind: 'choice', max: 3,
+    intro: 'Sight words! Listen, and tap the word I say.',
+    make: lv => {
+      const list = lv === 1 ? SIGHT1 : lv === 2 ? SIGHT1.concat(SIGHT2) : SIGHT2;
+      const w = pick(list);
+      let pool = list.filter(x => x !== w && x[0] === w[0]);
+      if (pool.length < 2) pool = pool.concat(shuffle(list.filter(x => x !== w && x[0] !== w[0])));
+      const opts = shuffle([w, ...shuffle(pool).slice(0, 2)]);
+      return {
+        say: `Find the word: ${w}.`,
+        ask: 'Find the word you hear 👂',
+        cols: 1,
+        choices: opts.map(o => ({ html: `<span class="w">${o}</span>`, ok: o === w, sp: o }))
+      };
+    }
+  },
+  { id: 'words', area: 'read', em: '🧰', nm: 'Word World', sh: '#ff9f1c', kind: 'choice', max: 2,
+    intro: 'Word world! Listen, and find the right picture.',
+    make: lv => {
+      const r = pick(lv === 1 ? WORDS.slice(0, 12) : WORDS);
+      const o = shuffle([[...r.a, 1], ...r.wrong]);
+      return {
+        say: `${r.ask} ${o.slice(0, -1).map(x => x[1]).join(', ')}, or ${o[o.length - 1][1]}?`,
+        ask: r.ask,
+        cols: 3,
+        choices: o.map(x => ({ html: `<span class="e">${x[0]}</span><span class="t">${x[1]}</span>`, ok: !!x[2], sp: x[1] }))
+      };
+    }
+  },
+  { id: 'count', area: 'math', em: '🍎', nm: 'Count It', sh: '#d94f63', kind: 'choice', max: 4, priority: true,
+    intro: 'Count it! Tap each thing to count it out loud, then pick the number.',
+    make: lv => {
+      const max = [0, 5, 10, 15, 20][lv];
+      const n = rnd(lv === 1 ? 1 : Math.max(3, max - 8), max);
+      const [e, nm] = pick(THINGS);
+      return {
+        say: `How many ${nm}? Tap each one to count.`,
+        count: true,
+        prompt: Array.from({ length: n }, () => `<button class="obj" type="button">${e}</button>`).join(''),
+        cols: 3,
+        choices: nearNums(n, 3, 1, max + 3).map(v => ({ html: numTxt(v), ok: v === n, sp: String(v) }))
+      };
+    }
+  },
+  { id: 'addsub', area: 'math', em: '➕', nm: 'Add & Take', sh: '#ff9f1c', kind: 'choice', max: 3, priority: true,
+    intro: 'Add and take away! Count the pictures to solve the math puzzle.',
+    make: lv => {
+      const [e, nm] = pick(THINGS);
+      const isAdd = lv === 1 ? true : Math.random() < 0.55;
+      if (isAdd) {
+        const cap = lv === 1 ? 5 : lv === 2 ? 8 : 10;
+        const a = rnd(1, Math.max(1, cap - 1));
+        const b = rnd(1, cap - a);
+        const ans = a + b;
+        const g1 = Array.from({ length: a }, () => `<button class="obj" type="button">${e}</button>`).join('');
+        const g2 = Array.from({ length: b }, () => `<button class="obj" type="button">${e}</button>`).join('');
+        return {
+          say: `${a} ${nm} plus ${b} more ${nm}. How many ${nm} altogether? Tap to count!`,
+          count: true,
+          prompt: `<div class="math-group">${g1}</div><span class="math-op">+</span><div class="math-group">${g2}</div><div class="math-eq">${a} + ${b} = ?</div>`,
+          cols: 3,
+          choices: nearNums(ans, 3, 1, cap + 2).map(v => ({ html: numTxt(v), ok: v === ans, sp: String(v) }))
+        };
+      } else {
+        const total = rnd(3, lv === 2 ? 6 : 10);
+        const take = rnd(1, total - 1);
+        const ans = total - take;
+        const objs = Array.from({ length: total }, (_, i) =>
+          i < total - take
+            ? `<button class="obj" type="button">${e}</button>`
+            : `<span class="obj crossed">${e}</span>`
+        ).join('');
+        return {
+          say: `Start with ${total} ${nm}. Take away ${take}. How many ${nm} are left?`,
+          count: true,
+          prompt: `<div class="math-group">${objs}</div><div class="math-eq">${total} − ${take} = ?</div>`,
+          cols: 3,
+          choices: nearNums(ans, 3, 1, total).map(v => ({ html: numTxt(v), ok: v === ans, sp: String(v) }))
+        };
+      }
+    }
+  },
+  { id: 'numbers', area: 'math', em: '🔢', nm: 'Number Fun', sh: '#2f8f6a', kind: 'choice', max: 4,
+    intro: 'Number fun! Find the numbers and fill ten frames.',
+    make: lv => {
+      // Ten-frame subitizing & make-10 practice
+      if (Math.random() < 0.42) {
+        if (lv === 1) {
+          const n = rnd(1, 10);
+          return {
+            say: `How many red dots are in the ten frame?`,
+            prompt: tenFrameSVG(n, false),
+            cols: 3,
+            choices: nearNums(n, 3, 1, 10).map(v => ({ html: numTxt(v), ok: v === n, sp: String(v) }))
+          };
+        } else {
+          const n = rnd(4, 9);
+          const need = 10 - n;
+          return {
+            say: `There are ${n} red dots. How many more dots do we need to make 10?`,
+            ask: `${n} + ? = 10`,
+            prompt: tenFrameSVG(n, true),
+            cols: 3,
+            choices: nearNums(need, 3, 1, 7).map(v => ({ html: numTxt(v), ok: v === need, sp: String(v) }))
+          };
+        }
+      }
+      const max = [0, 10, 20, 30, 50][lv];
+      if (lv > 1 && Math.random() < 0.4) {
+        const a = rnd(1, max - 3);
+        return {
+          say: `What number comes next? ${a}, ${a + 1}, ${a + 2}, and then?`,
+          prompt: `<div class="seq">${a}, ${a + 1}, ${a + 2}, <span class="q">?</span></div>`,
+          cols: 3,
+          choices: nearNums(a + 3, 3, 1, max + 2).map(v => ({ html: numTxt(v), ok: v === a + 3, sp: String(v) }))
+        };
+      }
+      const n = rnd(lv === 1 ? 0 : 5, max);
+      let opts = new Set([n]);
+      const rev = Number(String(n).split('').reverse().join(''));
+      if (n > 9 && rev !== n && rev <= 99) opts.add(rev);
+      nearNums(n, 4, 0, max + 5).forEach(v => { if (opts.size < 4) opts.add(v); });
+      return {
+        say: `Find the number ${n}.`,
+        ask: 'Find the number you hear 👂',
+        cols: 2,
+        choices: shuffle([...opts]).map(v => ({ html: numTxt(v), ok: v === n, sp: String(v) }))
+      };
+    }
+  },
+  { id: 'shapes', area: 'math', em: '🔺', nm: 'Shape Hunt', sh: '#3a57e8', kind: 'choice', max: 3, priority: true,
+    intro: 'Shape hunt! Find shapes, count sides, and spot where things are.',
+    make: lv => {
+      // Geometry spatial/positional questions (Emerging K Geometry standard)
+      if (lv >= 2 && Math.random() < 0.35) {
+        const positions = ['above', 'below', 'next to', 'inside'];
+        const target = pick(positions);
+        const others = shuffle(positions.filter(p => p !== target)).slice(0, 2);
+        const opts = shuffle([target, ...others]);
+        return {
+          say: `Look at the star and the blue box. Where is the star? Is it ${opts[0]}, ${opts[1]}, or ${opts[2]} the box?`,
+          ask: 'Where is the ⭐?',
+          prompt: posSceneSVG(target),
+          cols: 3,
+          choices: opts.map(p => ({ html: `<span class="t" style="font-size:22px">${p}</span>`, ok: p === target, sp: p }))
+        };
+      }
+      if (lv >= 2 && Math.random() < 0.35) {
+        const s = pick(Object.keys(SIDES));
+        const n = SIDES[s];
+        return {
+          say: `Count the sides. How many sides does this ${s} have?`,
+          prompt: shape(s, null, 150),
+          cols: 3,
+          choices: shuffle([3, 4, 6].map(v => ({ html: numTxt(v), ok: v === n, sp: String(v) })))
+        };
+      }
+      const bank = lv === 1 ? S2.slice(0, 5) : lv === 2 ? S2 : S2.concat(S3, S3);
+      const s = pick(bank);
+      const others = shuffle(bank.filter(x => x !== s && !(['square', 'diamond'].includes(x) && ['square', 'diamond'].includes(s))))
+        .filter((x, i, a) => a.indexOf(x) === i).slice(0, 2);
+      return {
+        say: `Find the ${s}.`,
+        ask: 'Find the shape you hear 👂',
+        cols: 3,
+        choices: shuffle([s, ...others]).map(o => ({ html: shape(o), ok: o === s, sp: o }))
+      };
+    }
+  },
+  { id: 'measure', area: 'math', em: '📏', nm: 'Big & Small', sh: '#9b5de5', kind: 'choice', max: 2,
+    intro: 'Big and small! Compare the things.',
+    make: lv => {
+      const t = pick(lv === 1 ? ['big', 'long', 'heavy'] : ['big', 'long', 'tall', 'heavy']);
+      const flip = Math.random() < 0.5;
+      if (t === 'heavy') {
+        const p = pick([
+          ['🐘', 'elephant', '🐭', 'mouse'],
+          ['🚚', 'truck', '🚲', 'bike'],
+          ['🐋', 'whale', '🐟', 'fish'],
+          ['🪨', 'rock', '🍃', 'leaf'],
+          ['🐄', 'cow', '🐤', 'chick'],
+          ['🍉', 'watermelon', '🍇', 'grape']
+        ]);
+        const w = flip ? 'lighter' : 'heavier';
+        return {
+          say: `Which one is ${w}? The ${p[1]} or the ${p[3]}?`,
+          ask: `Which is ${w}? ⚖️`,
+          cols: 2,
+          choices: shuffle([
+            { html: `<span class="e">${p[0]}</span><span class="t">${p[1]}</span>`, ok: !flip, sp: p[1] },
+            { html: `<span class="e">${p[2]}</span><span class="t">${p[3]}</span>`, ok: flip, sp: p[3] }
+          ])
+        };
+      }
+      const words = { big: ['bigger', 'smaller'], long: ['longer', 'shorter'], tall: ['taller', 'shorter'] }[t];
+      const w = flip ? words[1] : words[0];
+      const c = pick(COLS);
+      const mk = L => t === 'long'
+        ? `<svg width="140" height="40" viewBox="0 0 140 40"><rect x="${L ? 2 : 42}" y="12" width="${L ? 120 : 56}" height="16" rx="4" fill="${c}"/><polygon points="${L ? 122 : 98},12 ${L ? 138 : 114},20 ${L ? 122 : 98},28" fill="#f2c18d"/></svg>`
+        : `<svg width="60" height="120" viewBox="0 0 60 120"><rect x="12" y="${L ? 6 : 66}" width="36" height="${L ? 112 : 52}" rx="6" fill="${c}"/></svg>`;
+      const em = pick(['🐻', '🍎', '🌟', '🐳', '🎁', '🌸']);
+      const big = t === 'big' ? `<span style="font-size:96px;line-height:1.1">${em}</span>` : mk(true);
+      const small = t === 'big' ? `<span style="font-size:44px;line-height:1.1">${em}</span>` : mk(false);
+      return {
+        say: `Tap the one that is ${w}.`,
+        ask: `Which is ${w}?`,
+        cols: 2,
+        choices: shuffle([{ html: big, ok: !flip, sp: '' }, { html: small, ok: flip, sp: '' }])
+      };
+    }
+  }
+];
+
+/* ---------- screen navigation & home rendering ---------- */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  window.scrollTo(0, 0);
+}
+
+function renderHome() {
+  $('hiName').textContent = `Hi, ${data.name}!`;
+  $('starCount').textContent = data.stars;
+  $('streakCount').textContent = getStreak();
+  const td = getToday(), seq = advSeq();
+  $('advBtn').classList.toggle('complete', !!td.adv);
+  $('advTitle').textContent = td.adv ? 'Adventure done! Play again?' : "Today's Adventure";
+  $('advStops').innerHTML = seq.map(id => `<span class="stop${td.adv ? ' done' : ''}">${GM(id).em}</span>`).join('');
+
+  const t = getToday();
+  $('qRead').classList.toggle('done', t.read > 0);
+  $('qMath').classList.toggle('done', t.math > 0);
+  if (t.read > 0 && t.math > 0) {
+    $('questSub').textContent = 'Daily Star Goal Complete! 🌟';
+  } else if (t.read > 0) {
+    $('questSub').textContent = 'Now play 1 Math game!';
+  } else if (t.math > 0) {
+    $('questSub').textContent = 'Now play 1 Reading game!';
+  } else {
+    $('questSub').textContent = 'Play 1 Reading + 1 Math game!';
+  }
+
+  ['read', 'math'].forEach(a => {
+    $(a === 'read' ? 'gridRead' : 'gridMath').innerHTML = GAMES
+      .filter(g => g.area === a)
+      .map(g => {
+        const st = G(g.id);
+        const sub = g.kind === 'story' ? `⭐ ${st.rounds}` : `Level ${st.level}`;
+        const badge = g.priority ? `<span class="focus-dot" title="Focus Area">✨</span>` : '';
+        return `<button class="tile" type="button" style="--sh:${g.sh}" data-g="${g.id}">
+          ${badge}
+          <span class="em">${g.em}</span>
+          <span class="nm">${g.nm}</span>
+          <span class="lv">${sub}</span>
+        </button>`;
+      }).join('');
+  });
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('.tile');
+  if (t) start(GAMES.find(g => g.id === t.dataset.g));
+});
+
+/* ---------- round engine ---------- */
+let cur = null, R = null, ADV = null;
+const GM = id => GAMES.find(g => g.id === id);
+function advSeq() { const d = new Date().getDate(); return [d % 2 ? 'facts' : 'story', 'count', 'addsub', d % 3 === 0 ? 'numbers' : 'shapes']; }
+function startAdventure() { unlockAudio(); ADV = { seq: advSeq(), i: 0, stars: 0 }; start(GM(ADV.seq[0])); }
+function trail(done) { return ADV.seq.map((id, i) => `<span class="${i < done ? 'on' : ''}">${i < done ? '⭐' : GM(id).em}</span>`).join(''); }
+
+function start(game) {
+  unlockAudio();
+  cur = game;
+  const st = G(game.id);
+  R = { i: 0, score: 0, lastSay: '', lock: false };
+
+  if (game.kind === 'story') {
+    const seen = data.seen[game.id] || [];
+    let pool = game.bank.map((_, i) => i).filter(i => !seen.includes(i));
+    if (!pool.length) { data.seen[game.id] = []; pool = game.bank.map((_, i) => i); }
+    const idx = pick(pool);
+    (data.seen[game.id] = data.seen[game.id] || []).push(idx);
+    save();
+    R.story = game.bank[idx];
+    R.n = R.story.q.length;
+  } else if (game.kind === 'spell') {
+    // Level 1: CVC; Level 2: CVC + CCVC blends; Level 3: CCVC blends + Magic-E long vowels
+    const list = st.level === 1 ? CVC : st.level === 2 ? CVC.concat(BLEND) : BLEND.concat(MAGICE);
+    R.words = shuffle(list).slice(0, 6);
+    R.n = R.words.length;
+  } else {
+    R.n = ADV ? 4 : 8;
+  }
+  if (ADV && game.kind === 'spell') { R.words = R.words.slice(0, 4); R.n = 4; }
+
+  show('game');
+  setProg();
+  $('stage').innerHTML = `<div class="prompt" style="font-size:110px">${game.em}</div>`;
+  if (game.kind === 'story') return next(true);
+
+  const myR = R;
+  let went = false;
+  const go = () => { if (!went && R === myR) { went = true; next(true); } };
+  say(game.intro, go);
+  setTimeout(go, 6000);
+}
+
+function setProg() {
+  $('progBar').style.width = (R.i / R.n * 100) + '%';
+}
+
+function next(first) {
+  if (!$('game').classList.contains('on')) return;
+  if (!first) R.i++;
+  setProg();
+  if (R.i >= R.n) return finish();
+  if (cur.kind === 'story') {
+    if (first) return showStory();
+    return askChoice(storyQ(R.story.q[R.i]));
+  }
+  if (cur.kind === 'spell') return spell(R.words[R.i]);
+  askChoice(cur.make(G(cur.id).level));
+}
+
+function storyQ([q, opts]) {
+  const o = shuffle(opts);
+  return {
+    say: `${q} ${o.slice(0, -1).map(x => x[1]).join(', ')}, or ${o[o.length - 1][1]}?`,
+    ask: q,
+    cols: 3,
+    choices: o.map(x => ({
+      html: `<span class="e">${x[0]}</span><span class="t">${x[1]}</span>`,
+      ok: !!x[2],
+      sp: x[1]
+    }))
+  };
+}
+
+function showStory() {
+  const s = R.story;
+  $('stage').innerHTML = `
+    <div class="story">
+      <div class="art">${s.art}</div>
+      <h2>${s.t}</h2>
+      <p>${s.s.map((x, i) => `<span id="sn${i}">${x}</span>`).join(' ')}</p>
+    </div>
+    <div class="row">
+      <button class="pill" type="button" id="readAgain">🔊 Read again</button>
+      <button class="pill go" type="button" id="toQs">Questions ➡️</button>
+    </div>`;
+  $('readAgain').onclick = () => readStory();
+  $('toQs').onclick = () => askChoice(storyQ(s.q[0]));
+  R.lastSay = '__story';
+  setTimeout(() => readStory(), 300);
+}
+
+function readStory() {
+  if (!R || !R.story || !$('sn0')) return;
+  const s = R.story;
+  const myR = R;
+  let k = 0;
+  const step = () => {
+    if (R !== myR) return;
+    document.querySelectorAll('.story span').forEach(x => x.classList.remove('rd'));
+    if (k >= s.s.length || !$('sn' + k)) return;
+    $('sn' + k).classList.add('rd');
+    say(s.s[k], () => { k++; step(); });
+  };
+  say(s.t, () => step());
+}
+
+function askChoice(q) {
+  R.q = q;
+  R.miss = false;
+  R.lastSay = q.say;
+  const prompt = q.prompt ? `<div class="prompt">${q.prompt}</div>` : '';
+  $('stage').innerHTML = `
+    ${q.ask ? `<p class="ask">${q.ask}</p>` : ''}
+    ${prompt}
+    <div class="choices" style="--c:${q.cols}">
+      ${q.choices.map((c, i) => `<button class="ch" type="button" data-i="${i}">${c.html}</button>`).join('')}
+    </div>`;
+  if (q.count) {
+    let n = 0;
+    $('stage').querySelectorAll('button.obj').forEach(o => o.onclick = () => {
+      if (o.classList.contains('got')) return;
+      n++;
+      o.classList.add('got');
+      o.insertAdjacentHTML('beforeend', `<b>${n}</b>`);
+      tone([400 + n * 30], 0.08);
+      say(String(n));
+    });
+  }
+  $('stage').querySelectorAll('.ch').forEach(b => b.onclick = () => answer(b, q.choices[+b.dataset.i]));
+  say(q.say);
+}
+
+function answer(b, c) {
+  if (R.lock) return;
+  const st = G(cur.id);
+  if (c.ok) {
+    R.lock = true;
+    b.classList.add('ok');
+    ding();
+    if (!R.miss) { R.score++; st.right++; }
+    st.tries++;
+    save();
+    say(pick(PRAISE));
+    setTimeout(() => { R.lock = false; next(); }, 1500);
+  } else {
+    if (!R.miss) { st.tries++; save(); }
+    R.miss = true;
+    b.classList.add('no');
+    boop();
+    say((c.sp ? `That is ${c.sp}. ` : '') + pick(RETRY));
+  }
+}
+
+function spell([w, e]) {
+  R.miss = false;
+  let pos = 0;
+  R.lastSay = `Spell ${w}. ${w}.`;
+  const extra = shuffle(ABC.filter(l => !w.includes(l))).slice(0, 2);
+  const tiles = shuffle(w.split('').concat(extra));
+  $('stage').innerHTML = `
+    <div class="prompt" style="font-size:90px;line-height:1">${e}</div>
+    <div class="slots">${w.split('').map((_, i) => `<div class="slot" id="sl${i}"></div>`).join('')}</div>
+    <div class="letters">${tiles.map(l => `<button class="lt" type="button" data-l="${l}">${l}</button>`).join('')}</div>`;
+  const st = G(cur.id);
+  $('stage').querySelectorAll('.lt').forEach(b => b.onclick = () => {
+    if (R.lock) return;
+    const l = b.dataset.l;
+    if (l === w[pos]) {
+      b.classList.add('used');
+      $('sl' + pos).textContent = l;
+      $('sl' + pos).classList.add('fill');
+      tone([520 + pos * 90], 0.1);
+      pos++;
+      if (pos === w.length) {
+        R.lock = true;
+        st.tries++;
+        if (!R.miss) { R.score++; st.right++; }
+        save();
+        ding();
+        say(`${w.split('').join(', ')}. ${w}! ${pick(PRAISE)}`);
+        setTimeout(() => { R.lock = false; next(); }, 2500);
+      } else {
+        say(l);
+      }
+    } else {
+      R.miss = true;
+      b.classList.remove('bad');
+      void b.offsetWidth;
+      b.classList.add('bad');
+      boop();
+      say(`Hmm. Listen: ${w}. Try again.`);
+    }
+  });
+  say(R.lastSay);
+}
+
+function finish() {
+  const st = G(cur.id);
+  st.rounds++;
+  const t = getToday();
+  if (cur.area === 'read') t.read++;
+  if (cur.area === 'math') t.math++;
+
+  const pct = R.score / R.n;
+  const stars = pct >= 0.8 ? 3 : pct >= 0.5 ? 2 : 1;
+  data.stars += stars;
+
+  let up = '';
+  if (cur.max) {
+    if (pct >= 0.85 && st.level < cur.max) { st.level++; up = ' You moved up a level!'; }
+    else if (pct <= 0.5 && st.level > 1) { st.level--; }
+  }
+  save();
+
+  // Daily Adventure: checkpoint between stops, celebration at the end
+  if (ADV) {
+    ADV.stars += stars; ADV.i++;
+    if (ADV.i < ADV.seq.length) {
+      const nx = GM(ADV.seq[ADV.i]);
+      $('cpTrail').innerHTML = trail(ADV.i);
+      $('cpMsg').textContent = stars === 3 ? 'Amazing!' : 'Great job!';
+      $('cpNext').textContent = nx.em;
+      show('checkpoint'); tone([523, 659, 784], 0.14);
+      say(`${stars === 3 ? 'Amazing!' : 'Great job!'} You got ${stars} star${stars > 1 ? 's' : ''}. Next stop: ${nx.nm}! Tap the big button to keep going.`);
+      return;
+    }
+    t.adv = true; save();
+    const total = ADV.stars; ADV = null;
+    $('doneStars').textContent = '🏆';
+    $('doneMsg').textContent = `Adventure complete! +${total} ⭐`;
+    show('done'); confetti(); tone([523, 659, 784, 1047], 0.16);
+    say(`You finished today's adventure, ${data.name}! You earned ${total} stars. You are a super learner!`);
+    return;
+  }
+
+  // Check daily gentle break limit
+  if (data.limitMin > 0 && !breakShownToday && t.sec >= data.limitMin * 60) {
+    breakShownToday = true;
+    show('breakScreen');
+    confetti();
+    tone([523, 659, 784, 1047], 0.16);
+    say(`Great practice today, ${data.name}! You played for ${data.limitMin} minutes. Time for a break!`);
+    return;
+  }
+
+  $('doneStars').textContent = '⭐'.repeat(stars);
+  const msg = stars === 3 ? 'Amazing!' : stars === 2 ? 'Great work!' : 'Good try!';
+  $('doneMsg').textContent = msg;
+  show('done');
+  confetti();
+  tone([523, 659, 784, 1047], 0.16);
+  say(`${msg} You got ${stars} star${stars > 1 ? 's' : ''}, ${data.name}!${up}`);
+}
+
+function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (let i = 0; i < 26; i++) {
+    const d = document.createElement('div');
+    d.className = 'conf';
+    d.textContent = pick(['⭐', '🎉', '✨', '🌟', '🎈']);
+    d.style.left = rnd(0, 95) + 'vw';
+    d.style.animationDuration = (1.8 + Math.random() * 1.8) + 's';
+    d.style.animationDelay = (Math.random() * 0.6) + 's';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 4500);
+  }
+}
+
+/* ---------- button wiring ---------- */
+$('startBtn').onclick = () => {
+  unlockAudio();
+  tone([523, 784], 0.12);
+  renderHome();
+  show('home');
+  say(`Hi ${data.name}! Tap the rocket for today's adventure, or pick a game.`);
+};
+$('advBtn').onclick = startAdventure;
+$('cpGo').onclick = () => { if (ADV) start(GM(ADV.seq[ADV.i])); };
+$('cpHome').onclick = () => { ADV = null; sayTok++; try { speechSynthesis.cancel(); } catch (e) {} renderHome(); show('home'); };
+$('homeBtn').onclick = () => {
+  ADV = null;
+  sayTok++;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  renderHome();
+  show('home');
+};
+$('sayBtn').onclick = () => {
+  if (R && R.lastSay === '__story') readStory();
+  else if (R && R.lastSay) say(R.lastSay);
+};
+$('againBtn').onclick = () => { ADV = null; start(cur); };
+$('doneHome').onclick = () => { renderHome(); show('home'); say('Pick a game!'); };
+$('breakHome').onclick = () => { renderHome(); show('home'); };
+
+/* Grown-ups gate & dashboard */
+let gA = 0;
+$('grownBtn').onclick = () => {
+  const a = rnd(11, 19), b = rnd(6, 9);
+  gA = a + b;
+  $('gateQ').textContent = `What is ${a} + ${b}?`;
+  $('gateIn').value = '';
+  $('gatePanel').hidden = false;
+  $('grownBody').hidden = true;
+  $('resetNote').textContent = '';
+  show('grown');
+};
+$('grownBack').onclick = () => { renderHome(); show('home'); };
+$('gateGo').onclick = () => {
+  if (+$('gateIn').value === gA) {
+    $('gatePanel').hidden = true;
+    $('backupNote').textContent = '';
+    $('grownBody').hidden = false;
+    $('nameIn').value = data.name;
+    $('limitIn').value = String(data.limitMin);
+    const t = getToday();
+    $('gTodayMin').textContent = Math.max(1, Math.round(t.sec / 60)) + 'm';
+    $('gStreak').textContent = getStreak() + 'd';
+    $('gTotalStars').textContent = data.stars;
+    $('statRows').innerHTML = GAMES.map(g => {
+      const s = G(g.id);
+      const starMark = g.priority ? ' ★' : '';
+      return `<tr>
+        <td>${g.em} ${g.nm}${starMark}</td>
+        <td class="r">${g.kind === 'story' ? '—' : s.level + ' / ' + g.max}</td>
+        <td class="r">${s.rounds}</td>
+        <td class="r">${s.tries ? Math.round(s.right / s.tries * 100) + '%' : '—'}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    $('gateIn').value = '';
+    $('gateIn').focus();
+  }
+};
+$('saveName').onclick = () => {
+  const v = $('nameIn').value.trim();
+  if (v) data.name = esc(v).slice(0, 20);
+  data.limitMin = +$('limitIn').value || 0;
+  save();
+  $('resetNote').textContent = 'Saved!';
+};
+$('copyBackup').onclick = () => {
+  const txt = JSON.stringify({ app: 'star-learner', v: 2, data });
+  $('backupTxt').value = txt;
+  try { $('backupTxt').select(); } catch (e) {}
+  let ok = false;
+  try { navigator.clipboard.writeText(txt).then(() => { $('backupNote').textContent = 'Copied! Paste it on the other device.'; }, () => {}); ok = true; } catch (e) {}
+  $('backupNote').textContent = ok ? 'Backup ready — copied if your browser allows; otherwise select the text and copy it.' : 'Select the text in the box and copy it.';
+};
+$('loadBackup').onclick = () => {
+  try {
+    const o = JSON.parse($('backupTxt').value.trim());
+    const d = o && o.app === 'star-learner' ? o.data : null;
+    if (!d || typeof d.stars !== 'number' || typeof d.games !== 'object') throw 0;
+    data = { name: esc(d.name || 'Star').slice(0, 20), stars: Math.max(0, Math.floor(d.stars)), limitMin: +d.limitMin || 0,
+      games: d.games || {}, seen: d.seen || {}, daily: d.daily || {} };
+    save(); $('gateGo').onclick(); $('backupNote').textContent = 'Progress loaded on this device.';
+  } catch (e) { $('backupNote').textContent = 'That text is not a Star Learner backup.'; }
+};
+let resetArmed = false;
+$('resetBtn').onclick = () => {
+  if (!resetArmed) {
+    resetArmed = true;
+    $('resetNote').textContent = 'Tap Reset Progress again to clear all stars and levels.';
+    setTimeout(() => { resetArmed = false; }, 5000);
+    return;
+  }
+  const keepName = data.name;
+  data = { name: keepName, stars: 0, limitMin: data.limitMin, games: {}, seen: {}, daily: {} };
+  save();
+  resetArmed = false;
+  $('resetNote').textContent = 'Progress reset.';
+  $('gateGo').onclick();
+};
+
+if (data.name && data.name !== 'Star') {
+  $('splashName').textContent = `${data.name}'s Star Learner`;
+}
+}
+</script>
+<script>
+try{if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}}catch(e){}
+</script>
+</body>
+</html>
