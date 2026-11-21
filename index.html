@@ -357,6 +357,12 @@ h1, h2, .fred { font-weight: 800; letter-spacing: 0.2px; }
 .trail{display:flex;gap:8px;justify-content:center;font-size:30px}
 .trail span{opacity:.35}.trail span.on{opacity:1}
 #backupTxt{min-height:110px;font-size:13px !important;font-family:ui-monospace,monospace}
+#island{height:clamp(220px,38vh,340px);border-radius:28px;margin:4px 0 12px;overflow:hidden;touch-action:pan-y;
+  background:linear-gradient(180deg,light-dark(#9fdcff,#1d2a6b) 0%,light-dark(#dff4ff,#2c3d86) 70%);box-shadow:0 6px 0 rgba(0,0,0,.1)}
+.scene3d{height:clamp(260px,46vh,470px);border-radius:28px;overflow:hidden;touch-action:none;
+  background:linear-gradient(180deg,light-dark(#bfe8ff,#22306e),light-dark(#f2fbff,#34449a));box-shadow:0 6px 0 rgba(0,0,0,.1)}
+.choices:empty{display:none}
+#chest3d{width:min(380px,92vw);height:clamp(190px,30vh,260px)}
 @keyframes pop { 50% { transform: scale(1.12); } }
 @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 @keyframes bob { 50% { transform: translateY(-12px) rotate(6deg); } }
@@ -381,6 +387,7 @@ h1, h2, .fred { font-weight: 800; letter-spacing: 0.2px; }
       <div class="starpill">⭐ <span id="starCount">0</span></div>
     </div>
   </div>
+  <div id="island" hidden aria-label="Star Island: tap a place to play"></div>
   <button class="adv" id="advBtn" type="button"><span class="rk">🚀</span><span><b id="advTitle">Today's Adventure</b><span class="stops" id="advStops"></span></span></button>
   <div class="quest-banner" id="questBanner">
     <div>
@@ -409,6 +416,7 @@ h1, h2, .fred { font-weight: 800; letter-spacing: 0.2px; }
 </section>
 
 <section id="done" class="screen">
+  <div id="chest3d" hidden></div>
   <div class="stars" id="doneStars">⭐⭐⭐</div>
   <h1 id="doneMsg">Amazing!</h1>
   <div class="row">
@@ -1125,6 +1133,12 @@ const GAMES = [
       };
     }
   },
+  { id: 'count3d', area: 'math', em: '🧺', nm: 'Count & Drop', sh: '#22b573', kind: '3d', max: 4, priority: true,
+    intro: 'Count and drop! Tap each one to drop it in the box. Count out loud with me!' },
+  { id: 'shapes3d', area: 'math', em: '🧊', nm: '3D Shapes', sh: '#00b4d8', kind: '3d', max: 3, priority: true,
+    intro: '3D shapes! Spin the shapes with your finger, and tap the one I say.' },
+  { id: 'where3d', area: 'math', em: '🧸', nm: 'Where Is It?', sh: '#ff9f1c', kind: '3d', max: 2, priority: true,
+    intro: 'Where is the bear? Listen, and tap the right bear.' },
   { id: 'measure', area: 'math', em: '📏', nm: 'Big & Small', sh: '#9b5de5', kind: 'choice', max: 2,
     intro: 'Big and small! Compare the things.',
     make: lv => {
@@ -1169,6 +1183,60 @@ const GAMES = [
   }
 ];
 
+/* ---------- 3D (three.js) — loaded only when needed, with a 2D fallback ---------- */
+let OK3D = (() => { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); } catch (e) { return false; } })();
+let T3 = null, T3p = null;
+function load3D() {
+  if (T3) return Promise.resolve(T3);
+  if (!T3p) T3p = import('./three3d.js').then(m => (T3 = m)).catch(e => { OK3D = false; T3p = null; throw e; });
+  return T3p;
+}
+const FALLBACK2D = { count3d: 'count', shapes3d: 'shapes', where3d: 'shapes' };
+const visibleGames = () => GAMES.filter(g => g.kind !== '3d' || OK3D);
+function showIsland() {
+  const host = $('island');
+  if (!OK3D) { host.hidden = true; return; }
+  load3D().then(T => {
+    host.hidden = false;
+    T.island(host, { games: visibleGames().map(g => g.id), stars: data.stars,
+      onPick: id => { if (!$('home').classList.contains('on')) return; id === 'adv' ? startAdventure() : start(GM(id)); } });
+  }).catch(() => { host.hidden = true; renderHome(); });
+}
+function celebrate3D(stars) {
+  const host = $('chest3d');
+  if (!OK3D || !T3) { host.hidden = true; return; }
+  host.hidden = false;
+  try { T3.celebrate(host, stars); } catch (e) { host.hidden = true; }
+}
+function ask3D() {
+  R.miss = false;
+  const st = G(cur.id), myR = R;
+  $('stage').innerHTML = `<p class="ask" id="ask3d"></p><div class="scene3d" id="scene3d"></div><div class="choices" id="ch3d" style="--c:3"></div>`;
+  const api = {
+    say: (t, cb) => { if (R === myR) say(t, cb); },
+    tone,
+    setSay: t => { if (R === myR) R.lastSay = t; },
+    right: () => {
+      if (R !== myR || R.lock) return;
+      R.lock = true; ding();
+      if (!R.miss) { R.score++; st.right++; }
+      st.tries++; save();
+      say(pick(PRAISE));
+      setTimeout(() => { if (R === myR) { R.lock = false; next(); } }, 1800);
+    },
+    wrong: sp => {
+      if (R !== myR || R.lock) return;
+      if (!R.miss) { st.tries++; save(); }
+      R.miss = true; boop();
+      say((sp ? `That is ${sp}. ` : '') + pick(RETRY));
+    }
+  };
+  load3D().then(T => {
+    if (R !== myR || !$('scene3d')) return;
+    T.question(cur.id, st.level, { host: $('scene3d'), askEl: $('ask3d'), choicesEl: $('ch3d') }, api);
+  }).catch(() => { if (R === myR) start(GM(FALLBACK2D[cur.id])); });
+}
+
 /* ---------- screen navigation & home rendering ---------- */
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
@@ -1179,6 +1247,7 @@ function renderHome() {
   $('hiName').textContent = `Hi, ${data.name}!`;
   $('starCount').textContent = data.stars;
   $('streakCount').textContent = getStreak();
+  showIsland();
   const td = getToday(), seq = advSeq();
   $('advBtn').classList.toggle('complete', !!td.adv);
   $('advTitle').textContent = td.adv ? 'Adventure done! Play again?' : "Today's Adventure";
@@ -1198,7 +1267,7 @@ function renderHome() {
   }
 
   ['read', 'math'].forEach(a => {
-    $(a === 'read' ? 'gridRead' : 'gridMath').innerHTML = GAMES
+    $(a === 'read' ? 'gridRead' : 'gridMath').innerHTML = visibleGames()
       .filter(g => g.area === a)
       .map(g => {
         const st = G(g.id);
@@ -1222,7 +1291,7 @@ document.addEventListener('click', e => {
 /* ---------- round engine ---------- */
 let cur = null, R = null, ADV = null;
 const GM = id => GAMES.find(g => g.id === id);
-function advSeq() { const d = new Date().getDate(); return [d % 2 ? 'facts' : 'story', 'count', 'addsub', d % 3 === 0 ? 'numbers' : 'shapes']; }
+function advSeq() { const d = new Date().getDate(); return [d % 2 ? 'facts' : 'story', OK3D ? 'count3d' : 'count', 'addsub', d % 3 === 0 ? 'numbers' : OK3D ? (d % 2 ? 'shapes3d' : 'where3d') : 'shapes']; }
 function startAdventure() { unlockAudio(); ADV = { seq: advSeq(), i: 0, stars: 0 }; start(GM(ADV.seq[0])); }
 function trail(done) { return ADV.seq.map((id, i) => `<span class="${i < done ? 'on' : ''}">${i < done ? '⭐' : GM(id).em}</span>`).join(''); }
 
@@ -1277,6 +1346,7 @@ function next(first) {
     return askChoice(storyQ(R.story.q[R.i]));
   }
   if (cur.kind === 'spell') return spell(R.words[R.i]);
+  if (cur.kind === '3d') return ask3D();
   askChoice(cur.make(G(cur.id).level));
 }
 
@@ -1451,7 +1521,7 @@ function finish() {
     const total = ADV.stars; ADV = null;
     $('doneStars').textContent = '🏆';
     $('doneMsg').textContent = `Adventure complete! +${total} ⭐`;
-    show('done'); confetti(); tone([523, 659, 784, 1047], 0.16);
+    show('done'); confetti(); celebrate3D(3); tone([523, 659, 784, 1047], 0.16);
     say(`You finished today's adventure, ${data.name}! You earned ${total} stars. You are a super learner!`);
     return;
   }
@@ -1471,6 +1541,7 @@ function finish() {
   $('doneMsg').textContent = msg;
   show('done');
   confetti();
+  celebrate3D(stars);
   tone([523, 659, 784, 1047], 0.16);
   say(`${msg} You got ${stars} star${stars > 1 ? 's' : ''}, ${data.name}!${up}`);
 }
