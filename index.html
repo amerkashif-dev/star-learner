@@ -462,6 +462,12 @@ h1, h2, .fred { font-weight: 800; letter-spacing: 0.2px; }
     <div class="panel">
       <p style="margin-top:0"><b>Child's Display Name</b> (stored locally on this device only)</p>
       <input id="nameIn" maxlength="20">
+      <p style="margin-top:14px"><b>Voice speed</b></p>
+      <select id="speedIn">
+        <option value="slow">Slow (best for new words)</option>
+        <option value="medium" selected>Medium (recommended)</option>
+        <option value="normal">Normal</option>
+      </select>
       <p style="margin-top:14px"><b>Daily Gentle Break Reminder</b></p>
       <select id="limitIn">
         <option value="0">Off (no timer)</option>
@@ -566,28 +572,44 @@ if (hasTTS) {
 }
 
 let sayTok = 0;
+/* Speech: slower rate, and text is spoken in short pieces (split at . ? ! , and before "or")
+   with real pauses between them, so the question and each answer choice are heard separately. */
+const RATES = { slow: 0.62, medium: 0.72, normal: 0.85 };
+const speechRate = () => RATES[data.speed] || RATES.medium;
+function chunks(text) {
+  return String(text).replace(/,\s+or\s+/g, ', or ').split(/(?<=[.?!,])\s+/).map(x => x.trim()).filter(Boolean);
+}
 function say(text, onend) {
   const tok = ++sayTok;
   if (!hasTTS) { if (onend) setTimeout(onend, 350); return; }
   try { speechSynthesis.cancel(); } catch (e) {}
-  setTimeout(() => {
+  const parts = chunks(text);
+  const rate = speechRate();
+  let i = 0;
+  const speakNext = () => {
     if (tok !== sayTok) return;
+    if (i >= parts.length) { if (onend) onend(); return; }
+    const piece = parts[i++];
+    let done = false;
+    const after = () => {
+      if (done || tok !== sayTok) return;
+      done = true;
+      const gap = /[?]$/.test(piece) ? 650 : /[.!]$/.test(piece) ? 500 : /,$/.test(piece) ? 380 : 120;
+      setTimeout(speakNext, i >= parts.length ? 0 : gap);
+    };
     try {
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(piece);
       if (voice) u.voice = voice;
-      u.rate = 0.86;
-      u.pitch = 1.08;
-      let done = false;
-      const finishSay = () => { if (!done && tok === sayTok) { done = true; if (onend) onend(); } };
-      u.onend = finishSay;
-      u.onerror = finishSay;
+      u.rate = rate;
+      u.pitch = 1.05;
+      u.onend = after;
+      u.onerror = after;
       speechSynthesis.speak(u);
-      // Fallback watchdog in case iOS Safari drops onend
-      setTimeout(finishSay, Math.max(3000, text.length * 130));
-    } catch (e) {
-      if (onend) onend();
-    }
-  }, 65);
+      // Watchdog in case iOS Safari drops onend (scaled to the slower rate)
+      setTimeout(after, Math.max(2500, piece.length * 115 / rate));
+    } catch (e) { after(); }
+  };
+  setTimeout(speakNext, 80);
 }
 
 let actx = null;
@@ -943,7 +965,7 @@ const GAMES = [
       if (pool.length < 2) pool = pool.concat(shuffle(list.filter(x => x !== w && x[0] !== w[0])));
       const opts = shuffle([w, ...shuffle(pool).slice(0, 2)]);
       return {
-        say: `Find the word: ${w}.`,
+        say: `Find the word. ${w}. ${w}.`,
         ask: 'Find the word you hear 👂',
         cols: 1,
         choices: opts.map(o => ({ html: `<span class="w">${o}</span>`, ok: o === w, sp: o }))
@@ -1355,7 +1377,7 @@ function answer(b, c) {
 function spell([w, e]) {
   R.miss = false;
   let pos = 0;
-  R.lastSay = `Spell ${w}. ${w}.`;
+  R.lastSay = `Spell the word. ${w}. ${w}.`;
   const extra = shuffle(ABC.filter(l => !w.includes(l))).slice(0, 2);
   const tiles = shuffle(w.split('').concat(extra));
   $('stage').innerHTML = `
@@ -1513,6 +1535,7 @@ $('gateGo').onclick = () => {
     $('grownBody').hidden = false;
     $('nameIn').value = data.name;
     $('limitIn').value = String(data.limitMin);
+    $('speedIn').value = data.speed || 'medium';
     const t = getToday();
     $('gTodayMin').textContent = Math.max(1, Math.round(t.sec / 60)) + 'm';
     $('gStreak').textContent = getStreak() + 'd';
@@ -1536,6 +1559,8 @@ $('saveName').onclick = () => {
   const v = $('nameIn').value.trim();
   if (v) data.name = esc(v).slice(0, 20);
   data.limitMin = +$('limitIn').value || 0;
+  data.speed = $('speedIn').value;
+  say('This is how fast I will talk.');
   save();
   $('resetNote').textContent = 'Saved!';
 };
